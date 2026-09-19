@@ -1,23 +1,21 @@
 // tb.v
-// Starter testbench template -- YOU complete this file.
+// Testbench for parameterized lookup table.
 
 module tb;
 
-  // TODO: declare the inputs and outputs
-  // Inputs
-  reg [1:0] t_sel;
-
-  // Output
+  reg  [2:0] t_sel;
   wire [7:0] t_dout;
 
+  integer i;
+  integer errors;
 
-
-  // TODO: instantiate DUT here
-  lut DUT
-(
+  lut #(
+    .WIDTH(8),
+    .DEPTH(8)
+  ) DUT (
     .sel(t_sel),
     .dout(t_dout)
-);
+  );
 
   // Waveform dump configuration (DO NOT CHANGE)
   string vcd_file;
@@ -30,27 +28,33 @@ module tb;
 
   initial begin
 
-    t_sel = 0;
-    #5;
+    errors = 0;
 
-    t_sel = 1;
-    #5;
+    for (i = 0; i < 8; i = i + 1) begin
 
-    t_sel = 2;
-    #5;
+      t_sel = i;
+      #5;
 
-    t_sel = 3;
-    #5;
+      if (t_dout !== i * i) begin
+        $display("FAIL: sel=%d dout=%d expected=%d",
+                 t_sel, t_dout, i * i);
 
+        errors = errors + 1;
+      end
+      else begin
+        $display("PASS: sel=%d dout=%d",
+                 t_sel, t_dout);
+      end
+
+    end
+
+    $display("Total errors = %d", errors);
 
     $finish;
 
-end
+  end
 
   initial
-    $monitor($time,
-" sel=%b | dout=%d",
-t_sel,
-t_dout);
+    $monitor($time, " sel=%b | dout=%d", t_sel, t_dout);
 
 endmodule
