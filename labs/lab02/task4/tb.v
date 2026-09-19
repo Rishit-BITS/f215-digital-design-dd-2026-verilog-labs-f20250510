@@ -1,46 +1,120 @@
 // tb.v
-// Given -- do not modify.
-//
-// Instantiates all three of your AND-gate implementations side by side and
-// drives them with the SAME fast-toggling stimulus, so you can compare all
-// three waveforms in one view and see directly which implementation(s)
-// respond correctly to inputs that change faster than the delay.
+// Self-checking testbench for 2-bit comparator
 
 module tb;
 
-  reg  t_a, t_b;
-  wire y_df, y_before, y_intra;
+    // DUT inputs
+    reg [1:0] t_A;
+    reg [1:0] t_B;
 
-  and_df         U_DF     (.a(t_a), .b(t_b), .y(y_df));
-  and_beh_before U_BEFORE (.a(t_a), .b(t_b), .y(y_before));
-  and_beh_intra  U_INTRA  (.a(t_a), .b(t_b), .y(y_intra));
+    // DUT outputs
+    wire t_GT;
+    wire t_LT;
+    wire t_EQ;
 
-  // Waveform dump configuration
-  string vcd_file;
-  initial begin
-    if ($value$plusargs("vcd=%s", vcd_file)) begin
-      $dumpfile(vcd_file);
-      $dumpvars(0, tb);
+
+    // Instantiate DUT
+
+    comp2 DUT
+    (
+        .A(t_A),
+        .B(t_B),
+        .GT(t_GT),
+        .LT(t_LT),
+        .EQ(t_EQ)
+    );
+
+
+    // Waveform dump
+
+    string vcd_file;
+
+    initial begin
+        if ($value$plusargs("vcd=%s", vcd_file)) begin
+            $dumpfile(vcd_file);
+            $dumpvars(0, tb);
+        end
     end
-  end
 
-  // Each gate has a #5 delay somewhere in its own implementation. Toggle
-  // the inputs every 2 time units -- faster than that 5-unit delay -- so
-  // that any implementation using stale values will show it.
-  initial begin
-    t_a = 0; t_b = 0;
-    #2 t_a = 1; t_b = 0;
-    #2 t_a = 1; t_b = 1;
-    #2 t_a = 0; t_b = 1;
-    #2 t_a = 1; t_b = 1;
-    #2 t_a = 0; t_b = 0;
-    #2 t_a = 1; t_b = 1;
-    #2 t_a = 0; t_b = 0;
-    #10 $finish;
-  end
 
-  initial
-    $monitor($time, " a=%b b=%b | df=%b  before=%b  intra=%b",
-             t_a, t_b, y_df, y_before, y_intra);
+
+    // Self checking test
+
+    integer a;
+    integer b;
+
+    reg expected_GT;
+    reg expected_LT;
+    reg expected_EQ;
+
+
+    initial begin
+
+        // Test all 16 combinations
+
+        for(a = 0; a < 4; a = a + 1)
+        begin
+
+            for(b = 0; b < 4; b = b + 1)
+            begin
+
+                t_A = a;
+                t_B = b;
+
+                #5;
+
+
+                // Calculate expected result
+
+                expected_GT = (a > b);
+                expected_LT = (a < b);
+                expected_EQ = (a == b);
+
+
+                // Compare DUT output
+
+                if ((t_GT !== expected_GT) ||
+                    (t_LT !== expected_LT) ||
+                    (t_EQ !== expected_EQ))
+                begin
+
+                    $display("ERROR!");
+                    $display("A=%d B=%d", a, b);
+
+                    $display("Expected: GT=%b LT=%b EQ=%b",
+                             expected_GT,
+                             expected_LT,
+                             expected_EQ);
+
+                    $display("Actual:   GT=%b LT=%b EQ=%b",
+                             t_GT,
+                             t_LT,
+                             t_EQ);
+
+                end
+
+                else
+                begin
+
+                    $display("PASS: A=%d B=%d | GT=%b LT=%b EQ=%b",
+                             a,
+                             b,
+                             t_GT,
+                             t_LT,
+                             t_EQ);
+
+                end
+
+
+            end
+
+        end
+
+
+        $finish;
+
+    end
+
+
 
 endmodule
